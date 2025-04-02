@@ -50,4 +50,3 @@ frontend/
 |-- Dockerfile # Frontend Dockerfile
 |-- index.html # Root HTML file
 |-- package.json
-|-- vite.config.js # Vite configuration
