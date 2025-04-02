@@ -6,11 +6,18 @@ AI responses for different agent tasks.
 
 import json
 import logging
+import base64
+from email.mime.text import MIMEText
+from googleapiclient.errors import HttpError
 import google.generativeai as genai
 from datetime import datetime
 from django.conf import settings
 from django.utils import timezone
 from .models import AgentTask, EmailDraft, SearchResult
+
+# Import the Google credential helper from classroom_integration
+# Consider moving this helper to the 'core' app later for better separation
+from classroom_integration.services import get_google_service
 
 logger = logging.getLogger(__name__)
 
@@ -380,3 +387,68 @@ class Agent:
             task.response = f"I'm sorry, I couldn't retrieve the weather information you requested: {str(e)}"
             task.save(update_fields=['response', 'updated_at'])
             return False
+
+# --- Standalone functions for task processing and email sending ---
+
+def process_agent_task(task_id):
+    """
+    Function to process an agent task. 
+    This can be called directly or triggered by Celery.
+    """
+    agent = Agent()
+    return agent.process_task(task_id)
+
+def send_email(email_draft: EmailDraft, user) -> str | None:
+    """
+    Sends an email using the Gmail API with the user's credentials.
+    
+    Args:
+        email_draft: The EmailDraft object containing the email details.
+        user: The User object associated with the email.
+        
+    Returns:
+        The Gmail message ID if successful, None otherwise.
+        
+    Raises:
+        Exception: If sending fails.
+    """
+    logger.info(f"Attempting to send email draft {email_draft.id} for user {user.email}")
+    
+    try:
+        # Get Gmail service client using user's credentials
+        gmail_service = get_google_service(user, 'gmail', 'v1')
+        if not gmail_service:
+            raise Exception("Failed to get Gmail service client. Check Google credentials.")
+
+        # Create the email message
+        message = MIMEText(email_draft.final_content or email_draft.ai_generated_content)
+        message['to'] = email_draft.to_recipients
+        message['subject'] = email_draft.subject
+        if email_draft.cc_recipients:
+            message['cc'] = email_draft.cc_recipients
+        if email_draft.bcc_recipients:
+            message['bcc'] = email_draft.bcc_recipients
+        
+        # Encode the message in base64url format
+        raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
+        create_message = {
+            'raw': raw_message
+        }
+
+        # Send the message using Gmail API
+        send_message = gmail_service.users().messages().send(
+            userId='me', 
+            body=create_message
+        ).execute()
+        
+        message_id = send_message.get('id')
+        logger.info(f"Email sent successfully for draft {email_draft.id}. Message ID: {message_id}")
+        return message_id
+
+    except HttpError as error:
+        logger.error(f"An API error occurred sending email for draft {email_draft.id}: {error}")
+        # Re-raise a more specific exception or handle based on error code
+        raise Exception(f"Gmail API Error: {error}")
+    except Exception as e:
+        logger.exception(f"Failed to send email for draft {email_draft.id}: {e}")
+        raise Exception(f"Failed to send email: {e}")
