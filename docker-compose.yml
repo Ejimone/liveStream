@@ -1,0 +1,119 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine # Use a specific version
+    container_name: classroom_copilot_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/ # Persist data
+    environment:
+      POSTGRES_DB: ${DATABASE_URL#*@*:/} # Extract DB name from URL
+      POSTGRES_USER: ${DATABASE_URL#*//} # Extract user
+      POSTGRES_PASSWORD: ${DATABASE_URL#*:*@} # Extract password
+    ports:
+      - "5432:5432" # Expose only if needed externally, typically not
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine # Use a specific version
+    container_name: classroom_copilot_redis
+    ports:
+      - "6379:6379" # Expose only if needed externally
+    volumes:
+      - redis_data:/data # Persist Redis data (optional)
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: . # Assumes docker-compose.yml is in the project root
+      dockerfile: Dockerfile # Refers to the Django backend Dockerfile
+    container_name: classroom_copilot_backend
+    command: >
+      sh -c "python manage.py migrate &&
+             gunicorn --bind 0.0.0.0:8000 --workers 4 classroom_copilot_project.wsgi:application"
+    volumes:
+      - .:/app # Mount code for development (remove or use specific subdirs for production)
+      # - static_volume:/app/staticfiles # If collecting static files
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env # Load environment variables from .env file
+    depends_on:
+      db:
+        condition: service_healthy # Wait for db to be ready
+      redis:
+        condition: service_healthy # Wait for redis to be ready
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend # Path to frontend directory
+      dockerfile: Dockerfile # Refers to the React frontend Dockerfile
+      # args: # Pass build arguments if needed
+      #   VITE_API_BASE_URL: /api/ # Example if using Nginx proxy pass
+    container_name: classroom_copilot_frontend
+    ports:
+      - "3000:80" # Map host port 3000 to container port 80 (Nginx default)
+    depends_on:
+      - backend # May depend on backend if proxying API calls through Nginx
+    restart: unless-stopped
+    # If using Vite dev server directly instead of Nginx build:
+    # command: npm run dev -- --host # Make Vite accessible externally
+    # volumes:
+    #   - ./frontend:/app # Mount code for development
+    #   - /app/node_modules # Prevent host node_modules from overwriting container's
+
+  celeryworker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: classroom_copilot_celeryworker
+    command: celery -A classroom_copilot_project worker --loglevel=info
+    volumes:
+      - .:/app # Mount code
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      backend: # Ensure backend code/migrations are ready
+        condition: service_started # Or depends on a migration script completion if complex
+    restart: unless-stopped
+
+  # Optional: Celery Beat for scheduled tasks (if needed)
+  # celerybeat:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   container_name: classroom_copilot_celerybeat
+  #   command: celery -A classroom_copilot_project beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+  #   volumes:
+  #     - .:/app
+  #   env_file:
+  #     - .env
+  #   depends_on:
+  #     db:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #     backend:
+  #       condition: service_started
+  #   restart: unless-stopped
+
+
+volumes:
+  postgres_data:
+  redis_data:
+  # static_volume: # If using shared volume for static files
