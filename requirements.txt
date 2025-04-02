@@ -1,0 +1,45 @@
+# Django Core
+Django
+djangorestframework
+django-cors-headers # For frontend communication
+psycopg2-binary # PostgreSQL driver
+
+# Authentication & Google APIs
+google-api-python-client
+google-auth-httplib2
+google-auth-oauthlib
+google-auth
+rest_framework.authtoken # Or djangorestframework-simplejwt for JWT
+
+# AI & RAG
+google-generativeai # For Gemini API
+sentence-transformers # For embeddings
+faiss-cpu # Vector store (CPU version)
+# Or faiss-gpu if GPU is available and configured
+# Or pinecone-client if using Pinecone
+
+# Text Extraction
+PyPDF2
+pdfplumber
+python-docx
+python-pptx
+
+# PDF Generation
+xhtml2pdf # Or reportlab
+
+# Background Tasks
+celery
+redis # Broker/Result Backend
+django-celery-results # Store task results in DB
+
+# Utilities
+python-dotenv
+requests
+gunicorn # WSGI server for production
+tqdm # Progress bars (optional, useful for scripts)
+
+# Coursera Automation (Separate feature set)
+# selenium
+# webdriver-manager
+
+

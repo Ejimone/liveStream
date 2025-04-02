@@ -10,24 +10,28 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import os
 from pathlib import Path
 import json
-import os
+import dj_database_url # Import dj-database-url
+from dotenv import load_dotenv # Import python-dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Load environment variables from .env file
+load_dotenv(BASE_DIR.parent / '.env') # Load .env from the project root
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-(202k)!#fh33#qvw(buj2wj8m-mp#)$zltlf*vc)8-4i$#y@^q'
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-default-key-for-dev') # Load from env
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DJANGO_DEBUG', 'True') == 'True' # Load from env
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 
 # Application definition
@@ -39,23 +43,24 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-     # Third-party apps
+    # Third-party apps
     'rest_framework',
-    'rest_framework.authtoken', # If using TokenAuthentication
+    'rest_framework.authtoken', # Use DRF Token Auth
     'corsheaders', # For allowing React frontend requests
-    # Add other third-party apps like django-celery-results if needed
+    'django_celery_results', # To store Celery task results in the DB
 
-    # # Local apps (adjust paths if necessary)
-    # 'apps.core.apps.CoreConfig',
-    # 'apps.users.apps.UsersConfig',
-    # 'apps.classroom_integration.apps.ClassroomIntegrationConfig',
-    # 'apps.ai_processing.apps.AiProcessingConfig',
-    # 'apps.agent_services.apps.AgentServicesConfig',
+    # Local apps
+    'users.apps.UsersConfig',
+    'classroom_integration.apps.ClassroomIntegrationConfig',
+    'ai_processing.apps.AiProcessingConfig',
+    'aiAgent.apps.AiagentConfig', # Renamed from agent_services? Keep consistent.
+    # 'core.apps.CoreConfig', # Add core app if created
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware', # Add CorsMiddleware
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -85,12 +90,12 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-
+# Use dj-database-url to parse DATABASE_URL from environment variable
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.config(
+        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}", # Fallback to SQLite for local dev if DATABASE_URL not set
+        conn_max_age=600 # Optional: connection pooling
+    )
 }
 
 
@@ -116,31 +121,42 @@ AUTH_PASSWORD_VALIDATORS = [
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        # Use SessionAuthentication for web browsable API and potentially frontend if using cookies
-        'rest_framework.authentication.SessionAuthentication',
-        # Use TokenAuthentication or JWT for SPA interaction
+        # Use TokenAuthentication for API requests from frontend/clients
         'rest_framework.authentication.TokenAuthentication',
-        # Add OAuth2 authentication if directly handling token validation server-side
-        'oauth2_provider.contrib.rest_framework.OAuth2Authentication',
+        # SessionAuthentication can be kept for browsable API access if desired
+        'rest_framework.authentication.SessionAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticatedOrReadOnly', # Adjust as needed
+        'rest_framework.permissions.IsAuthenticated', # Default to requiring authentication
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 10
 }
 
+# CORS Settings
+CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:3000,http://127.0.0.1:3000').split(',')
+CORS_ALLOW_CREDENTIALS = True # Allow cookies if using SessionAuth alongside TokenAuth
 
+# Google OAuth Credentials (Loaded from environment variables)
+GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
+GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
+# Ensure this matches exactly what's in Google Cloud Console AND the callback view URL
+GOOGLE_REDIRECT_URI = os.getenv('GOOGLE_REDIRECT_URI', 'http://127.0.0.1:8000/api/auth/google/callback/')
+GOOGLE_SCOPES = [
+    'https://www.googleapis.com/auth/userinfo.email',
+    'https://www.googleapis.com/auth/userinfo.profile',
+    'openid',
+    'https://www.googleapis.com/auth/classroom.courses.readonly',
+    'https://www.googleapis.com/auth/classroom.coursework.me', # Fetch assignments
+    'https://www.googleapis.com/auth/classroom.coursework.students', # Submit assignments
+    'https://www.googleapis.com/auth/classroom.announcements.readonly', # If needed
+    'https://www.googleapis.com/auth/drive.readonly', # To download materials
+    # Add Gmail scope if email agent is implemented
+    # 'https://www.googleapis.com/auth/gmail.send',
+]
 
-CORS_ALLOWED_ORIGINS = ["*"]
-CORS_ALLOW_CREDENTIALS = True # If using session/cookie auth
-CREDENTIALS_FILE = r'c:/Users/openc/liveStream/credentials.json'
-with open(CREDENTIALS_FILE, 'r', encoding='utf-8') as f:
-    creds = json.load(f)
-
-GOOGLE_CLIENT_ID = creds['web']['client_id']
-GOOGLE_CLIENT_SECRET = creds['web']['client_secret']
-GOOGLE_REDIRECT_URI = creds['web']['redirect_uris'][0]
+# Gemini API Key (Loaded from environment variable)
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
@@ -154,10 +170,15 @@ USE_I18N = True
 USE_TZ = True
 
 
+# Custom User model
+AUTH_USER_MODEL = 'users.User'
+
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+# Add STATIC_ROOT for collectstatic in production
+# STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -166,11 +187,52 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 
+# Celery Configuration
+CELERY_BROKER_URL = os.getenv('REDIS_URL', 'redis://redis:6379/0') # Load from env, default to Docker service name
+CELERY_RESULT_BACKEND = 'django-db' # Store results in Django DB via django-celery-results
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE # Use Django's timezone
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler' # If using scheduled tasks
 
+# AI Processing Configuration
+# Define a path for storing FAISS index and other temporary AI files
+AI_DATA_PATH = BASE_DIR / 'ai_data'
+FAISS_INDEX_PATH = AI_DATA_PATH / 'faiss_indices'
+os.makedirs(FAISS_INDEX_PATH, exist_ok=True) # Ensure the directory exists
 
-# CELERY_BROKER_URL = config('REDIS_URL', default='redis://localhost:6379/0')
-# CELERY_RESULT_BACKEND = config('REDIS_URL', default='redis://localhost:6379/0')
-# CELERY_ACCEPT_CONTENT = ['json']
-# CELERY_TASK_SERIALIZER = 'json'
-# CELERY_RESULT_SERIALIZER = 'json'
-# CELERY_TIMEZONE = TIME_ZONE # Use Django's timezone
+# Logging Configuration (Optional but recommended)
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO', # Adjust level as needed (DEBUG, INFO, WARNING, ERROR)
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
+            'propagate': False,
+        },
+        # Add loggers for your specific apps
+        'users': {'handlers': ['console'], 'level': 'DEBUG', 'propagate': True},
+        'classroom_integration': {'handlers': ['console'], 'level': 'DEBUG', 'propagate': True},
+        'ai_processing': {'handlers': ['console'], 'level': 'DEBUG', 'propagate': True},
+        'aiAgent': {'handlers': ['console'], 'level': 'DEBUG', 'propagate': True},
+    },
+}
+
+# Remove the old way of loading credentials from JSON file
+# CREDENTIALS_FILE = r'c:/Users/openc/liveStream/credentials.json'
+# with open(CREDENTIALS_FILE, 'r', encoding='utf-8') as f:
+#     creds = json.load(f)
+# GOOGLE_CLIENT_ID = creds['web']['client_id']
+# GOOGLE_CLIENT_SECRET = creds['web']['client_secret']
+# GOOGLE_REDIRECT_URI = creds['web']['redirect_uris'][0]

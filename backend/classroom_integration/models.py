@@ -23,8 +23,20 @@ class Assignment(models.Model):
     description = models.TextField(blank=True, null=True)
     due_date = models.DateTimeField(null=True, blank=True)
     google_link = models.URLField(max_length=500, null=True, blank=True)
-    # Status tracking (e.g., 'New', 'Processing', 'DraftReady', 'Submitted', 'Error')
-    status = models.CharField(max_length=50, default='New')
+    STATUS_CHOICES = [
+        ('New', 'New'),
+        ('Syncing', 'Syncing Materials'),
+        ('Processing', 'Processing Materials'),
+        ('MaterialsReady', 'Materials Ready for AI'),
+        ('GeneratingDraft', 'Generating AI Draft'),
+        ('DraftReady', 'Draft Ready for Review'),
+        ('UserReviewing', 'User Reviewing'),
+        ('GeneratingPDF', 'Generating PDF'), # If PDF step is needed
+        ('Submitting', 'Submitting to Classroom'),
+        ('Submitted', 'Submitted'),
+        ('Error', 'Error'),
+    ]
+    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='New')
     last_synced = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -41,7 +53,17 @@ class Material(models.Model):
     google_link = models.URLField(max_length=500)
     file_type = models.CharField(max_length=50) # e.g., 'PDF', 'DOCX', 'GOOGLE_DOC'
     local_path = models.CharField(max_length=500, null=True, blank=True) # Path where downloaded/processed
-    processing_status = models.CharField(max_length=50, default='Pending') # 'Pending', 'Downloaded', 'Processed', 'Error'
+    PROCESSING_STATUS_CHOICES = [
+        ('Pending', 'Pending Download'),
+        ('Downloading', 'Downloading'),
+        ('Downloaded', 'Downloaded'),
+        ('Processing', 'Extracting Text'),
+        ('Chunking', 'Chunking Text'),
+        ('Embedding', 'Generating Embeddings'),
+        ('Processed', 'Processed & Indexed'),
+        ('Error', 'Error'),
+    ]
+    processing_status = models.CharField(max_length=50, choices=PROCESSING_STATUS_CHOICES, default='Pending')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
