@@ -11,6 +11,8 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+import json
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -37,6 +39,18 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+     # Third-party apps
+    'rest_framework',
+    'rest_framework.authtoken', # If using TokenAuthentication
+    'corsheaders', # For allowing React frontend requests
+    # Add other third-party apps like django-celery-results if needed
+
+    # # Local apps (adjust paths if necessary)
+    # 'apps.core.apps.CoreConfig',
+    # 'apps.users.apps.UsersConfig',
+    # 'apps.classroom_integration.apps.ClassroomIntegrationConfig',
+    # 'apps.ai_processing.apps.AiProcessingConfig',
+    # 'apps.agent_services.apps.AgentServicesConfig',
 ]
 
 MIDDLEWARE = [
@@ -99,6 +113,35 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        # Use SessionAuthentication for web browsable API and potentially frontend if using cookies
+        'rest_framework.authentication.SessionAuthentication',
+        # Use TokenAuthentication or JWT for SPA interaction
+        'rest_framework.authentication.TokenAuthentication',
+        # Add OAuth2 authentication if directly handling token validation server-side
+        'oauth2_provider.contrib.rest_framework.OAuth2Authentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticatedOrReadOnly', # Adjust as needed
+    ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 10
+}
+
+
+
+CORS_ALLOWED_ORIGINS = ["*"]
+CORS_ALLOW_CREDENTIALS = True # If using session/cookie auth
+CREDENTIALS_FILE = r'c:/Users/openc/liveStream/credentials.json'
+with open(CREDENTIALS_FILE, 'r', encoding='utf-8') as f:
+    creds = json.load(f)
+
+GOOGLE_CLIENT_ID = creds['web']['client_id']
+GOOGLE_CLIENT_SECRET = creds['web']['client_secret']
+GOOGLE_REDIRECT_URI = creds['web']['redirect_uris'][0]
+
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
@@ -120,3 +163,14 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+
+
+
+# CELERY_BROKER_URL = config('REDIS_URL', default='redis://localhost:6379/0')
+# CELERY_RESULT_BACKEND = config('REDIS_URL', default='redis://localhost:6379/0')
+# CELERY_ACCEPT_CONTENT = ['json']
+# CELERY_TASK_SERIALIZER = 'json'
+# CELERY_RESULT_SERIALIZER = 'json'
+# CELERY_TIMEZONE = TIME_ZONE # Use Django's timezone
