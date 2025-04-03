@@ -65,7 +65,7 @@ class AgentTaskAdmin(admin.ModelAdmin):
 
 @admin.register(EmailDraft)
 class EmailDraftAdmin(admin.ModelAdmin):
-    list_display = ('subject', 'get_user', 'status', 'recipient_count', 'created_at', 'sent_at')
+    list_display = ('subject', 'get_user', 'status', 'recipient_count_display', 'created_at', 'sent_at')
     list_filter = ('status', 'created_at', 'sent_at')
     search_fields = ('subject', 'to_recipients', 'cc_recipients', 'ai_generated_content', 'user_edited_content')
     readonly_fields = ('created_at', 'updated_at', 'sent_at', 'agent_task')
@@ -96,6 +96,11 @@ class EmailDraftAdmin(admin.ModelAdmin):
     
     get_user.short_description = 'User'
     get_user.admin_order_field = 'agent_task__user__email'
+
+    def recipient_count_display(self, obj):
+        return obj.recipient_count
+    
+    recipient_count_display.short_description = 'Recipients'
 
 @admin.register(SearchResult)
 class SearchResultAdmin(admin.ModelAdmin):

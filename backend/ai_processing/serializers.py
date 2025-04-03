@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from .models import Document, Chunk, AssignmentDraft
 from classroom_integration.models import Assignment
-from classroom_integration.serializers import AssignmentSerializer
+from classroom_integration.serializers import AssignmentListSerializer
 
 class ChunkSerializer(serializers.ModelSerializer):
     """Serializer for text chunks."""
@@ -41,7 +41,7 @@ class AssignmentDraftSerializer(serializers.ModelSerializer):
 
 class AssignmentDraftDetailSerializer(AssignmentDraftSerializer):
     """Detailed serializer for drafts including content."""
-    assignment_details = AssignmentSerializer(source='assignment', read_only=True)
+    assignment_details = AssignmentListSerializer(source='assignment', read_only=True)
     relevant_chunk_texts = serializers.SerializerMethodField()
     
     class Meta:

@@ -3,13 +3,14 @@ Django
 djangorestframework
 django-cors-headers # For frontend communication
 psycopg2-binary # PostgreSQL driver
+dj-database-url # For parsing DATABASE_URL
 
 # Authentication & Google APIs
 google-api-python-client
 google-auth-httplib2
 google-auth-oauthlib
 google-auth
-rest_framework.authtoken # Or djangorestframework-simplejwt for JWT
+# rest_framework.authtoken # Or djangorestframework-simplejwt for JWT
 
 # AI & RAG
 google-generativeai # For Gemini API
