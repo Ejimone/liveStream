@@ -188,7 +188,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 # Celery Configuration
-CELERY_BROKER_URL = os.getenv('REDIS_URL', 'redis://redis:6379/0') # Load from env, default to Docker service name
+# Use memory broker for local development if Redis is not available
+CELERY_BROKER_URL = os.getenv('REDIS_URL', 'memory://') # Changed from redis://redis:6379/0
 CELERY_RESULT_BACKEND = 'django-db' # Store results in Django DB via django-celery-results
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
