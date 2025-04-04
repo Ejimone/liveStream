@@ -2,7 +2,7 @@ import logging
 from celery import shared_task
 from django.utils import timezone
 from users.models import User
-from .models import Course, Assignment, Material
+from .models import Course, Assignment, AssignmentMaterial
 from .services import fetch_classroom_courses, fetch_course_assignments, download_drive_file
 # Import the task from ai_processing to trigger it after download
 from ai_processing.tasks import process_material_task

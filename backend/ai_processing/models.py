@@ -1,12 +1,12 @@
 from django.db import models
-from classroom_integration.models import Material, Assignment
+from classroom_integration.models import AssignmentMaterial, Assignment
 
 class Document(models.Model):
     """
-    Represents a processed document from a Material.
+    Represents a processed document from an AssignmentMaterial.
     Contains extracted text content and metadata.
     """
-    material = models.OneToOneField(Material, on_delete=models.CASCADE, related_name='document')
+    material = models.OneToOneField(AssignmentMaterial, on_delete=models.CASCADE, related_name='document')
     raw_text = models.TextField()  # Full extracted text content
     processed_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

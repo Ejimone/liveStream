@@ -1,15 +1,14 @@
 from rest_framework import serializers
-from .models import Course, Assignment, Material
+from .models import Course, Assignment, AssignmentMaterial
 
 class MaterialSerializer(serializers.ModelSerializer):
-    """Serializer for Material model."""
-    
+    """Serializer for AssignmentMaterial model."""
+
     class Meta:
-        model = Material
+        model = AssignmentMaterial
         fields = [
-            'id', 'google_id', 'title', 'file_type', 
-            'google_link', 'google_drive_file_id',
-            'processing_status', 'created_at', 'updated_at'
+            'id', 'name', 'material_type', 'download_link', 
+            'created_at', 'updated_at'
         ]
         read_only_fields = fields
 

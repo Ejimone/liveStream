@@ -4,7 +4,7 @@ import os
 from celery import shared_task
 from django.conf import settings
 from django.utils import timezone
-from classroom_integration.models import Material, Assignment
+from classroom_integration.models import AssignmentMaterial, Assignment
 
 # Local imports
 from .models import Document, Chunk, AssignmentDraft
@@ -28,7 +28,7 @@ def process_material_task(material_id, file_content_bytes=None):
     """
     try:
         # Get the material
-        material = Material.objects.select_related('assignment').get(pk=material_id)
+        material = AssignmentMaterial.objects.select_related('assignment').get(pk=material_id)
         
         # Update status
         material.processing_status = 'Processing'
@@ -78,7 +78,7 @@ def process_material_task(material_id, file_content_bytes=None):
         
         return f"Successfully processed material {material_id}"
         
-    except Material.DoesNotExist:
+    except AssignmentMaterial.DoesNotExist:
         logger.error(f"Material with ID {material_id} not found")
         return f"Failed: Material {material_id} not found"
     except Exception as e:
@@ -86,7 +86,7 @@ def process_material_task(material_id, file_content_bytes=None):
         
         try:
             # Update material status to error
-            material = Material.objects.get(pk=material_id)
+            material = AssignmentMaterial.objects.get(pk=material_id)
             material.processing_status = 'Error'
             material.save(update_fields=['processing_status'])
         except Exception:
@@ -134,7 +134,7 @@ def generate_chunks_and_embeddings_task(document_id):
         
         # Check if all materials for this assignment are processed
         assignment = material.assignment
-        unprocessed_materials = Material.objects.filter(
+        unprocessed_materials = AssignmentMaterial.objects.filter(
             assignment=assignment,
             processing_status__in=['Pending', 'Downloading', 'Downloaded', 'Processing', 'Chunking', 'Embedding']
         ).count()

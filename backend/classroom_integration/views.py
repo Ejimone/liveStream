@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from django.utils import timezone
 from django.shortcuts import get_object_or_404
 
-from .models import Course, Assignment, Material
+from .models import Course, Assignment, AssignmentMaterial
 from .serializers import (
     CourseListSerializer,
     CourseDetailSerializer,
@@ -143,12 +143,12 @@ class MaterialViewSet(viewsets.ReadOnlyModelViewSet):
     Read-only since materials should only be modified via the Google Classroom API.
     """
     permission_classes = [permissions.IsAuthenticated]
-    queryset = Material.objects.all()
+    queryset = AssignmentMaterial.objects.all()
     serializer_class = MaterialSerializer
     
     def get_queryset(self):
         """Filter materials to those owned by the current user."""
-        return Material.objects.filter(
+        return AssignmentMaterial.objects.filter(
             assignment__course__owner=self.request.user
         ).order_by('-created_at')
     

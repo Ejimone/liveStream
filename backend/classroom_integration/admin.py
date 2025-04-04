@@ -1,41 +1,31 @@
 from django.contrib import admin
-from .models import Course, Assignment, Material
+from .models import Course, Assignment, AssignmentMaterial
 
 @admin.register(Course)
 class CourseAdmin(admin.ModelAdmin):
-    list_display = ('name', 'google_id', 'owner', 'created_at', 'last_synced')
-    list_filter = ('owner', 'created_at', 'last_synced')
-    search_fields = ('name', 'google_id', 'owner__email')
-    readonly_fields = ('google_id', 'created_at', 'updated_at')
-    date_hierarchy = 'created_at'
+    list_display = ('name', 'classroom_id', 'user', 'created_at', 'updated_at')
+    list_filter = ('user', 'created_at', 'updated_at')
+    search_fields = ('name', 'classroom_id', 'user__email')
+    readonly_fields = ('classroom_id', 'created_at', 'updated_at')
 
 @admin.register(Assignment)
 class AssignmentAdmin(admin.ModelAdmin):
     list_display = ('title', 'course', 'status', 'due_date', 'created_at')
     list_filter = ('status', 'course', 'created_at', 'due_date')
-    search_fields = ('title', 'description', 'google_id', 'course__name')
-    readonly_fields = ('google_id', 'created_at', 'updated_at')
-    date_hierarchy = 'created_at'
-    
-    # Nested material inline for viewing materials within an assignment
+    search_fields = ('title', 'description', 'classroom_id', 'course__name')
+    readonly_fields = ('classroom_id', 'created_at', 'updated_at')
+
     class MaterialInline(admin.TabularInline):
-        model = Material
+        model = AssignmentMaterial
         extra = 0
-        readonly_fields = ('google_id', 'created_at', 'updated_at')
-        fields = ('title', 'file_type', 'processing_status', 'google_link')
-        
+        readonly_fields = ('created_at', 'updated_at')
+        fields = ('name', 'material_type', 'download_link')
+
     inlines = [MaterialInline]
 
-@admin.register(Material)
-class MaterialAdmin(admin.ModelAdmin):
-    list_display = ('title', 'file_type', 'assignment', 'processing_status', 'created_at')
-    list_filter = ('file_type', 'processing_status', 'created_at')
-    search_fields = ('title', 'google_id', 'assignment__title')
-    readonly_fields = ('google_id', 'created_at', 'updated_at')
-    date_hierarchy = 'created_at'
-    
-    def assignment_course(self, obj):
-        return obj.assignment.course
-    
-    assignment_course.short_description = 'Course'
-    assignment_course.admin_order_field = 'assignment__course'
+@admin.register(AssignmentMaterial)
+class AssignmentMaterialAdmin(admin.ModelAdmin):
+    list_display = ('name', 'material_type', 'assignment', 'created_at')
+    list_filter = ('material_type', 'created_at')
+    search_fields = ('name', 'assignment__title')
+    readonly_fields = ('created_at', 'updated_at')
